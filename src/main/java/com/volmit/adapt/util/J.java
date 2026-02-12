@@ -19,21 +19,28 @@
 package com.volmit.adapt.util;
 
 import com.volmit.adapt.Adapt;
-import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.entity.Entity;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
 public class J {
-    private static final int tid = 0;
     private static List<Runnable> afterStartup = new ArrayList<>();
     private static List<Runnable> afterStartupAsync = new ArrayList<>();
     private static boolean started = false;
+
+    private static final AtomicInteger LEGACY_TASK_ID = new AtomicInteger(1);
+    private static final Map<Integer, CancellableTask> LEGACY_TASKS = new ConcurrentHashMap<>();
+    private static volatile ServerScheduler scheduler;
 
     public static void dofor(int a, Function<Integer, Boolean> c, int ch, Consumer<Integer> d) {
         for (int i = a; c.apply(i); i += ch) {
@@ -133,11 +140,6 @@ public class J {
     /**
      * Schedule a sync task to be run right after startup. If the server has already
      * started ticking, it will simply run it in a sync task.
-     * <p>
-     * If you dont know if you should queue this or not, do so, it's pretty
-     * forgiving.
-     *
-     * @param r the runnable
      */
     public static void ass(Runnable r) {
         if (started) {
@@ -150,11 +152,6 @@ public class J {
     /**
      * Schedule an async task to be run right after startup. If the server has
      * already started ticking, it will simply run it in an async task.
-     * <p>
-     * If you dont know if you should queue this or not, do so, it's pretty
-     * forgiving.
-     *
-     * @param r the runnable
      */
     public static void asa(Runnable r) {
         if (started) {
@@ -164,51 +161,84 @@ public class J {
         }
     }
 
-    /**
-     * Queue a sync task
-     *
-     * @param r the runnable
-     */
-    public static void s(Runnable r) {
-        Bukkit.getScheduler().scheduleSyncDelayedTask(Adapt.instance, r);
+    public static CancellableTask sh(Runnable r) {
+        return scheduler().runGlobal(r);
+    }
+
+    public static CancellableTask sh(Runnable r, long delayTicks) {
+        return scheduler().runGlobalDelayed(r, delayTicks);
+    }
+
+    public static CancellableTask srh(Runnable r, long intervalTicks) {
+        return scheduler().runGlobalRepeating(r, 0, intervalTicks);
+    }
+
+    public static CancellableTask ah(Runnable r) {
+        return scheduler().runAsync(r);
+    }
+
+    public static CancellableTask ah(Runnable r, long delayTicks) {
+        return scheduler().runAsyncDelayed(r, delayTicks);
+    }
+
+    public static CancellableTask arh(Runnable r, long intervalTicks) {
+        return scheduler().runAsyncRepeating(r, 0, intervalTicks);
+    }
+
+    public static CancellableTask eh(Entity entity, Runnable task) {
+        return scheduler().runEntity(entity, task);
+    }
+
+    public static CancellableTask eh(Entity entity, Runnable task, long delayTicks) {
+        return scheduler().runEntityDelayed(entity, task, delayTicks);
+    }
+
+    public static CancellableTask erh(Entity entity, Runnable task, long intervalTicks) {
+        return scheduler().runEntityRepeating(entity, task, 0, intervalTicks);
+    }
+
+    public static CancellableTask rh(Location location, Runnable task) {
+        return scheduler().runRegion(location, task);
+    }
+
+    public static CancellableTask rh(Location location, Runnable task, long delayTicks) {
+        return scheduler().runRegionDelayed(location, task, delayTicks);
+    }
+
+    public static CancellableTask rrh(Location location, Runnable task, long intervalTicks) {
+        return scheduler().runRegionRepeating(location, task, 0, intervalTicks);
     }
 
     /**
      * Queue a sync task
-     *
-     * @param r     the runnable
-     * @param delay the delay to wait in ticks before running
+     */
+    public static void s(Runnable r) {
+        sh(r);
+    }
+
+    /**
+     * Queue a sync task
      */
     public static void s(Runnable r, int delay) {
-        Bukkit.getScheduler().scheduleSyncDelayedTask(Adapt.instance, r, delay);
+        sh(r, delay);
     }
 
     /**
      * Cancel a sync repeating task
-     *
-     * @param id the task id
      */
     public static void csr(int id) {
-        Bukkit.getScheduler().cancelTask(id);
+        cancelLegacyTask(id);
     }
 
     /**
      * Start a sync repeating task
-     *
-     * @param r        the runnable
-     * @param interval the interval
-     * @return the task id
      */
     public static int sr(Runnable r, int interval) {
-        return Bukkit.getScheduler().scheduleSyncRepeatingTask(Adapt.instance, r, 0, interval);
+        return registerLegacyTask(srh(r, interval));
     }
 
     /**
      * Start a sync repeating task for a limited amount of ticks
-     *
-     * @param r         the runnable
-     * @param interval  the interval in ticks
-     * @param intervals the maximum amount of intervals to run
      */
     public static void sr(Runnable r, int interval, int intervals) {
         FinalInteger fi = new FinalInteger(0);
@@ -227,43 +257,28 @@ public class J {
     }
 
     /**
-     * Call an async task dealyed
-     *
-     * @param r     the runnable
-     * @param delay the delay to wait before running
+     * Call an async task delayed
      */
-    @SuppressWarnings("deprecation")
     public static void a(Runnable r, int delay) {
-        Bukkit.getScheduler().scheduleAsyncDelayedTask(Adapt.instance, r, delay);
+        ah(r, delay);
     }
 
     /**
      * Cancel an async repeat task
-     *
-     * @param id the id
      */
     public static void car(int id) {
-        Bukkit.getScheduler().cancelTask(id);
+        cancelLegacyTask(id);
     }
 
     /**
      * Start an async repeat task
-     *
-     * @param r        the runnable
-     * @param interval the interval in ticks
-     * @return the task id
      */
-    @SuppressWarnings("deprecation")
     public static int ar(Runnable r, int interval) {
-        return Bukkit.getScheduler().scheduleAsyncRepeatingTask(Adapt.instance, r, 0, interval);
+        return registerLegacyTask(arh(r, interval));
     }
 
     /**
      * Start an async repeating task for a limited time
-     *
-     * @param r         the runnable
-     * @param interval  the interval
-     * @param intervals the intervals to run
      */
     public static void ar(Runnable r, int interval, int intervals) {
         FinalInteger fi = new FinalInteger(0);
@@ -279,5 +294,33 @@ public class J {
                 }
             }
         };
+    }
+
+    private static int registerLegacyTask(CancellableTask task) {
+        int id = LEGACY_TASK_ID.getAndIncrement();
+        LEGACY_TASKS.put(id, task);
+        return id;
+    }
+
+    private static void cancelLegacyTask(int id) {
+        CancellableTask task = LEGACY_TASKS.remove(id);
+        if (task != null) {
+            task.cancel();
+        }
+    }
+
+    private static ServerScheduler scheduler() {
+        ServerScheduler current = scheduler;
+        if (current != null) {
+            return current;
+        }
+
+        synchronized (J.class) {
+            if (scheduler == null) {
+                scheduler = ServerScheduler.create(Adapt.instance);
+            }
+
+            return scheduler;
+        }
     }
 }

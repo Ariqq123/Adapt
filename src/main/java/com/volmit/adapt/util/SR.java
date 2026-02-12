@@ -19,22 +19,23 @@
 package com.volmit.adapt.util;
 
 public abstract class SR implements Runnable, CancellableTask {
-    private int id = 0;
+    private final CancellableTask task;
 
     public SR() {
         this(0);
     }
 
     public SR(int interval) {
-        id = J.sr(this, interval);
+        task = J.srh(this, interval);
     }
 
     @Override
     public void cancel() {
-        J.csr(id);
+        task.cancel();
     }
 
+    @Deprecated
     public int getId() {
-        return id;
+        return -1;
     }
 }
