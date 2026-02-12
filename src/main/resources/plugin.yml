@@ -1,11 +1,12 @@
 name: ${name}
 main: com.volmit.adapt.Adapt
 version: ${version}
+api-version: '${apiVersion}'
+folia-supported: true
 authors:
   - NextdoorPsycho
   - Cyberpwn
   - Vatuu
-api-version: '${apiVersion}'
 softdepend:
   - PlaceholderAPI
   - WorldGuard
