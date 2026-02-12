@@ -19,9 +19,8 @@
 package com.volmit.adapt.api.tick;
 
 import com.volmit.adapt.Adapt;
-import com.volmit.adapt.util.J;
 import com.volmit.adapt.util.M;
-import org.bukkit.Bukkit;
+import com.volmit.adapt.util.ThreadContext;
 import org.bukkit.event.Listener;
 
 import java.util.UUID;
@@ -106,9 +105,9 @@ public abstract class TickedObject implements Ticked, Listener {
 
     @Override
     public void tick() {
-        if (!Bukkit.isPrimaryThread()) {
+        if (!ThreadContext.isGlobalThread()) {
             if (pendingSyncTick.compareAndSet(false, true)) {
-                J.s(() -> {
+                ThreadContext.global(() -> {
                     try {
                         tick();
                     } finally {

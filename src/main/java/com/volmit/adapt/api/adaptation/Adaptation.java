@@ -88,7 +88,7 @@ public interface Adaptation<T> extends Ticked, Component {
 
     default boolean canUse(AdaptPlayer player) {
         Adapt.verbose("Checking if " + player.getPlayer().getName() + " can use " + getName() + "...");
-        AdaptAdaptationUseEvent e = new AdaptAdaptationUseEvent(!Bukkit.isPrimaryThread(), player, this);
+        AdaptAdaptationUseEvent e = new AdaptAdaptationUseEvent(!ThreadContext.isGlobalThread(), player, this);
         Bukkit.getServer().getPluginManager().callEvent(e);
         return (!e.isCancelled());
     }
@@ -476,9 +476,9 @@ public interface Adaptation<T> extends Ticked, Component {
         if (!getSkill().isEnabled()) {
             return;
         }
-        if (!Bukkit.isPrimaryThread()) {
+        if (!ThreadContext.isGlobalThread()) {
             int targetPage = page;
-            J.s(() -> openGui(player, targetPage));
+            ThreadContext.global(() -> openGui(player, targetPage));
             return;
         }
 
