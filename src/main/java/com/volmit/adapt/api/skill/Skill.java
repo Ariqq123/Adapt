@@ -33,7 +33,6 @@ import com.volmit.adapt.api.xp.XP;
 import com.volmit.adapt.content.gui.SkillsGui;
 import com.volmit.adapt.util.*;
 import com.volmit.adapt.util.collection.KList;
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -239,9 +238,9 @@ public interface Skill<T> extends Ticked, Component {
         if (!player.getClass().getSimpleName().equals("CraftPlayer")) {
             return;
         }
-        if (!Bukkit.isPrimaryThread()) {
+        if (!ThreadContext.isGlobalThread()) {
             int targetPage = page;
-            J.s(() -> openGui(player, targetPage));
+            ThreadContext.global(() -> openGui(player, targetPage));
             return;
         }
 

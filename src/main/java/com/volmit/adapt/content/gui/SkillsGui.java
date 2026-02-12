@@ -25,7 +25,6 @@ import com.volmit.adapt.api.world.PlayerAdaptation;
 import com.volmit.adapt.api.world.PlayerSkillLine;
 import com.volmit.adapt.api.xp.XP;
 import com.volmit.adapt.util.*;
-import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 
@@ -42,9 +41,9 @@ public class SkillsGui {
     }
 
     public static void open(Player player, int page) {
-        if (!Bukkit.isPrimaryThread()) {
+        if (!ThreadContext.isGlobalThread()) {
             int targetPage = page;
-            J.s(() -> open(player, targetPage));
+            ThreadContext.global(() -> open(player, targetPage));
             return;
         }
 

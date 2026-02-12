@@ -1,7 +1,6 @@
 package com.volmit.adapt.util;
 
 import com.volmit.adapt.Adapt;
-import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 
@@ -20,8 +19,8 @@ public final class GuiConfirm {
             return;
         }
 
-        if (!Bukkit.isPrimaryThread()) {
-            J.s(() -> open(player, title, message, onConfirm, onCancel));
+        if (!ThreadContext.isGlobalThread()) {
+            ThreadContext.global(() -> open(player, title, message, onConfirm, onCancel));
             return;
         }
 

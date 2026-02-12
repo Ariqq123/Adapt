@@ -19,12 +19,12 @@ import com.volmit.adapt.util.Localizer;
 import com.volmit.adapt.util.M;
 import com.volmit.adapt.util.MaterialBlock;
 import com.volmit.adapt.util.SoundPlayer;
+import com.volmit.adapt.util.ThreadContext;
 import com.volmit.adapt.util.UIElement;
 import com.volmit.adapt.util.UIWindow;
 import com.volmit.adapt.util.Window;
 import com.volmit.adapt.util.config.ConfigDocumentation;
 import com.volmit.adapt.util.config.TomlCodec;
-import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryType;
@@ -85,10 +85,10 @@ public final class ConfigGui {
             return;
         }
 
-        if (!Bukkit.isPrimaryThread()) {
+        if (!ThreadContext.isGlobalThread()) {
             String path = sectionPath;
             int targetPage = page;
-            J.s(() -> open(player, path, targetPage));
+            ThreadContext.global(() -> open(player, path, targetPage));
             return;
         }
 
